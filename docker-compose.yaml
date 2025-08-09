@@ -1,36 +1,6 @@
 version: "3.9"
 
 services:
-  api:
-    container_name: evolution_api
-    image: evoapicloud/evolution-api:latest
-    restart: always
-    depends_on:
-      - redis
-      - postgres
-    ports:
-      - "8080:8080"
-    volumes:
-      - evolution_instances:/evolution/instances
-    networks:
-      - evolution-net
-    env_file:
-      - .env
-    expose:
-      - "8080"
-
-  redis:
-    image: redis:latest
-    container_name: redis
-    command: >
-      redis-server --port 6379 --appendonly yes
-    ports:
-      - "6379:6379"
-    volumes:
-      - evolution_redis:/data
-    networks:
-      - evolution-net
-
   postgres:
     image: postgres:15
     container_name: postgres
@@ -41,6 +11,49 @@ services:
       POSTGRES_DB: evolution_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - evolution-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d evolution_db || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: ["redis-server","--port","6379","--appendonly","yes"]
+    volumes:
+      - evolution_redis:/data
+    networks:
+      - evolution-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  api:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution_api
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "9001:8080"          # 👈 API’yi dışarı 9001’den açıyoruz
+    expose:
+      - "8080"
+    env_file:
+      - .env                 # Secrets’tan gelen ENV’lerle birlikte çalışır
+    environment:
+      SERVER_TYPE: http
+      SERVER_PORT: "8080"
+      HOST: 0.0.0.0
+    volumes:
+      - evolution_instances:/evolution/instances
     networks:
       - evolution-net
 

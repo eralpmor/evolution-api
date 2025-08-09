@@ -42,16 +42,21 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # İstersen debug için açık bırak; HTTPS için şart değil:
     ports:
-      - "9001:8080"          # 👈 API’yi dışarı 9001’den açıyoruz
+      - "9001:8080"
     expose:
       - "8080"
     env_file:
-      - .env                 # Secrets’tan gelen ENV’lerle birlikte çalışır
+      - .env
     environment:
       SERVER_TYPE: http
       SERVER_PORT: "8080"
       HOST: 0.0.0.0
+      # HTTPS domainini bildir (app kendi URL'ini bilsin):
+      SERVER_URL: "https://api.nationalaicompany.com"
+      # Proxy arkasında doğru client IP için:
+      TRUST_PROXY: "true"
     volumes:
       - evolution_instances:/evolution/instances
     networks:

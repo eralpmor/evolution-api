@@ -9,16 +9,14 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
       POSTGRES_DB: evolution_db
-      # Healthcheck'in şifreye ihtiyaç duymaması için pg_isready'e PGPASSWORD geçiyoruz
-      PGPASSWORD: pass
     volumes:
       - postgres_data_v2:/var/lib/postgresql/data
     healthcheck:
-      # Sunucu hazır mı? Kullanıcı/DB ile gerçek bağlantı kurarak kontrol et
-      test: ["CMD-SHELL", "pg_isready -q -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1 -p 5432"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB} -h 127.0.0.1 -p 5432 || exit 1"]
+      interval: 2s
       timeout: 5s
       retries: 120
+      start_period: 10s
     networks:
       - evolution-net
 
@@ -42,9 +40,8 @@ services:
       redis:
         condition: service_started
     ports:
-      - "8080:8080"                       # İstersen kaldırıp Coolify Networking ile expose edebilirsin
+      - "8080:8080"
     environment:
-      # ---- Server ----
       SERVER_TYPE: http
       SERVER_PORT: 8080
       LANGUAGE: en
@@ -54,17 +51,11 @@ services:
       CORS_METHODS: "GET,POST,PUT,DELETE"
       CORS_CREDENTIALS: "true"
       TELEMETRY: "false"
-
-      # ---- Auth ----
       AUTHENTICATION_API_KEY: pp_1pI1sE4b2c9Dk7Qz6mN4w8T1a5G0y3H2v9J5rX8fL2uC7kP
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
-
-      # ---- Database (API ile Postgres tam uyumlu) ----
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: postgresql
       DATABASE_URL: postgresql://user:pass@postgres:5432/evolution_db?schema=evolution_api
-
-      # ---- Cache ----
       CACHE_LOCAL_ENABLED: "false"
       CACHE_REDIS_ENABLED: "true"
       CACHE_REDIS_URI: redis://redis:6379/6
@@ -79,8 +70,9 @@ services:
 
 volumes:
   evolution_instances:
+    external: true
   evolution_redis:
-  # Yeni isim: eski, bozuk veriyi otomatik kullanmasın diye farklı volume adı
+    external: true
   postgres_data_v2:
 
 networks:

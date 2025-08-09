@@ -42,25 +42,47 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # İstersen debug için açık bırak; HTTPS için şart değil:
+
+    # İstersen debug için dışarıdan açık kalsın; domain Traefik üzerinden gelecek
     ports:
       - "9001:8080"
     expose:
       - "8080"
+
     env_file:
       - .env
     environment:
       SERVER_TYPE: http
       SERVER_PORT: "8080"
       HOST: 0.0.0.0
-      # HTTPS domainini bildir (app kendi URL'ini bilsin):
       SERVER_URL: "https://api.nationalaicompany.com"
-      # Proxy arkasında doğru client IP için:
       TRUST_PROXY: "true"
+
     volumes:
       - evolution_instances:/evolution/instances
+
+    # Traefik (Coolify proxy) için etiketler ve proxy ağı
+    labels:
+      - "traefik.enable=true"
+
+      # HTTPS router
+      - "traefik.http.routers.evo.rule=Host(`api.nationalaicompany.com`)"
+      - "traefik.http.routers.evo.entrypoints=websecure"
+      - "traefik.http.routers.evo.tls=true"
+      - "traefik.http.services.evo.loadbalancer.server.port=8080"
+
+      # HTTP -> HTTPS yönlendirmesi
+      - "traefik.http.routers.evo-http.rule=Host(`api.nationalaicompany.com`)"
+      - "traefik.http.routers.evo-http.entrypoints=web"
+      - "traefik.http.routers.evo-http.middlewares=evo-redirect"
+      - "traefik.http.middlewares.evo-redirect.redirectscheme.scheme=https"
+
+      # Eğer Coolify'da certresolver adı 'letsencrypt' ise şu satırı da ekleyebilirsin:
+      # - "traefik.http.routers.evo.tls.certresolver=letsencrypt"
+
     networks:
       - evolution-net
+      - coolify-proxy
 
 volumes:
   evolution_instances:
@@ -74,3 +96,6 @@ networks:
   evolution-net:
     name: evolution-net
     driver: bridge
+  coolify-proxy:
+    external: true
+    name: coolify-proxy

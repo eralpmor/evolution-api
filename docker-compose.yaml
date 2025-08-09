@@ -1,36 +1,6 @@
 version: "3.9"
 
 services:
-  api:
-    container_name: evolution_api
-    image: evoapicloud/evolution-api:latest
-    restart: always
-    depends_on:
-      - redis
-      - postgres
-    ports:
-      - "8080:8080"
-    volumes:
-      - evolution_instances:/evolution/instances
-    networks:
-      - evolution-net
-    env_file:
-      - .env
-    expose:
-      - "8080"
-
-  redis:
-    image: redis:latest
-    container_name: redis
-    command: >
-      redis-server --port 6379 --appendonly yes
-    ports:
-      - "6379:6379"
-    volumes:
-      - evolution_redis:/data
-    networks:
-      - evolution-net
-
   postgres:
     image: postgres:15
     container_name: postgres
@@ -46,6 +16,61 @@ services:
       interval: 5s
       timeout: 3s
       retries: 60
+    networks:
+      - evolution-net
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    restart: always
+    command: ["redis-server","--port","6379","--appendonly","yes"]
+    volumes:
+      - evolution_redis:/data
+    networks:
+      - evolution-net
+
+  api:
+    image: evoapicloud/evolution-api:latest
+    container_name: evolution_api
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    ports:
+      - "8080:8080"              # Coolify'de port map istiyorsan bırak; yoksa kaldırıp Networking'ten expose et
+    volumes:
+      - evolution_instances:/evolution/instances
+    environment:
+      # ---- Server ----
+      SERVER_TYPE: http
+      SERVER_PORT: 8080
+      LANGUAGE: en
+      LOG_LEVEL: INFO
+      LOG_COLOR: "true"
+      CORS_ORIGIN: "*"
+      CORS_METHODS: "GET,POST,PUT,DELETE"
+      CORS_CREDENTIALS: "true"
+      TELEMETRY: "false"
+
+      # ---- Auth ----
+      AUTHENTICATION_API_KEY: pp_1pI1sE4b2c9Dk7Qz6mN4w8T1a5G0y3H2v9J5rX8fL2uC7kP
+      AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
+
+      # ---- Database ----
+      DATABASE_ENABLED: "true"
+      DATABASE_PROVIDER: postgresql
+      DATABASE_URL: postgresql://user:pass@postgres:5432/evolution_db?schema=evolution_api
+
+      # ---- Cache ----
+      CACHE_LOCAL_ENABLED: "false"
+      CACHE_REDIS_ENABLED: "true"
+      CACHE_REDIS_URI: redis://redis:6379/6
+      CACHE_REDIS_PREFIX_KEY: evolution
+      CACHE_REDIS_SAVE_INSTANCES: "true"
+    expose:
+      - "8080"
     networks:
       - evolution-net
 

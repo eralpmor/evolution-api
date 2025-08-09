@@ -5,21 +5,15 @@ services:
     image: postgres:15
     container_name: postgres
     restart: always
-    command:
-      - "postgres"
-      - "-c" ; "max_connections=200"
-      - "-c" ; "listen_addresses=*"
-      - "-c" ; "shared_buffers=256MB"
-      - "-c" ; "effective_cache_size=1GB"
-      - "-c" ; "work_mem=4MB"
     environment:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: pass
       POSTGRES_DB: evolution_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      command: ["postgres","-c","max_connections=200","-c","listen_addresses=*","-c","shared_buffers=256MB","-c","effective_cache_size=1GB","-c","work_mem=4MB"]
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d evolution_db"]
+      test: ["CMD-SHELL","pg_isready -U user -d evolution_db"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -30,12 +24,11 @@ services:
     image: redis:latest
     container_name: redis
     restart: always
-    command: >
-      redis-server --port 6379 --appendonly yes
+    command: ["redis-server","--port","6379","--appendonly","yes"]
     volumes:
       - evolution_redis:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD","redis-cli","ping"]
       interval: 5s
       timeout: 3s
       retries: 20
@@ -52,7 +45,7 @@ services:
       redis:
         condition: service_started
     environment:
-      # ---- Server ----
+      # Server
       SERVER_TYPE: http
       SERVER_PORT: 8080
       LANGUAGE: en
@@ -62,17 +55,14 @@ services:
       CORS_METHODS: "GET,POST,PUT,DELETE"
       CORS_CREDENTIALS: "true"
       TELEMETRY: "false"
-
-      # ---- Auth ----
+      # Auth
       AUTHENTICATION_API_KEY: pp_1pI1sE4b2c9Dk7Qz6mN4w8T1a5G0y3H2v9J5rX8fL2uC7kP
       AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES: "true"
-
-      # ---- Database (Prisma) ----
+      # Database
       DATABASE_ENABLED: "true"
       DATABASE_PROVIDER: postgresql
       DATABASE_URL: postgresql://user:pass@postgres:5432/evolution_db?schema=evolution_api
-
-      # ---- Cache (Redis) ----
+      # Cache
       CACHE_LOCAL_ENABLED: "false"
       CACHE_REDIS_ENABLED: "true"
       CACHE_REDIS_URI: redis://redis:6379/6

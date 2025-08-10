@@ -43,7 +43,7 @@ services:
       redis:
         condition: service_healthy
 
-    # İstersen debug için açık kalsın; tamamen proxy ile gideceksen bu satırı silebilirsin.
+    # Sadece debug için dışarı açık; tamamen proxy ile gideceksen bu kısmı silebilirsin
     ports:
       - "9001:8080"
     expose:
@@ -61,19 +61,22 @@ services:
     volumes:
       - evolution_instances:/evolution/instances
 
-    # Traefik (Coolify proxy) entegrasyonu
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=coolify"
 
-      # HTTPS router (443)
+      # HTTPS (443)
       - "traefik.http.routers.evo.rule=Host(`api.nationalaicompany.com`)"
       - "traefik.http.routers.evo.entrypoints=websecure"
       - "traefik.http.routers.evo.tls=true"
+      # Eğer Coolify'da certresolver adı 'letsencrypt' ise aktif bırak; yoksa bu satırı kaldır
       - "traefik.http.routers.evo.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.evo.priority=100"
+      - "traefik.http.routers.evo.service=evo"
       - "traefik.http.services.evo.loadbalancer.server.port=8080"
+      - "traefik.http.services.evo.loadbalancer.server.scheme=http"
 
-      # HTTP -> HTTPS yönlendirmesi (80 -> 443)
+      # HTTP (80) -> HTTPS yönlendirme
       - "traefik.http.routers.evo-http.rule=Host(`api.nationalaicompany.com`)"
       - "traefik.http.routers.evo-http.entrypoints=web"
       - "traefik.http.routers.evo-http.middlewares=evo-redirect"
@@ -95,7 +98,6 @@ networks:
   evolution-net:
     name: evolution-net
     driver: bridge
-  # Coolify’nin varsayılan proxy ağı (docker network ls çıktında gözüken ad)
   coolify:
     external: true
     name: coolify

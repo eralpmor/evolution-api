@@ -42,13 +42,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-
-    # Sadece debug için dışarı açık; tamamen proxy ile gideceksen bu kısmı silebilirsin
     ports:
-      - "9001:8080"
+      - "9001:8080"           # İstersen sonra kaldırabilirsin (sadece debug)
     expose:
       - "8080"
-
     env_file:
       - .env
     environment:
@@ -57,19 +54,16 @@ services:
       HOST: 0.0.0.0
       SERVER_URL: "https://api.nationalaicompany.com"
       TRUST_PROXY: "true"
-
     volumes:
       - evolution_instances:/evolution/instances
-
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=coolify"
 
-      # HTTPS (443)
+      # HTTPS router (443)
       - "traefik.http.routers.evo.rule=Host(`api.nationalaicompany.com`)"
       - "traefik.http.routers.evo.entrypoints=websecure"
       - "traefik.http.routers.evo.tls=true"
-      # Eğer Coolify'da certresolver adı 'letsencrypt' ise aktif bırak; yoksa bu satırı kaldır
       - "traefik.http.routers.evo.tls.certresolver=letsencrypt"
       - "traefik.http.routers.evo.priority=100"
       - "traefik.http.routers.evo.service=evo"
@@ -81,7 +75,6 @@ services:
       - "traefik.http.routers.evo-http.entrypoints=web"
       - "traefik.http.routers.evo-http.middlewares=evo-redirect"
       - "traefik.http.middlewares.evo-redirect.redirectscheme.scheme=https"
-
     networks:
       - evolution-net
       - coolify

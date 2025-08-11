@@ -43,25 +43,33 @@ services:
       redis:
         condition: service_healthy
 
-    # İstersen bırak; sadece Traefik kullanacaksan silebilirsin.
-    ports:
-      - "9001:8080"
+    # Traefik üzerinden yayın yapacağımız için dış porta map etmiyoruz.
     expose:
       - "8080"
 
     env_file:
       - .env
     environment:
+      # Sunucu
+      NODE_ENV: production
       SERVER_TYPE: http
       SERVER_PORT: "8080"
       HOST: 0.0.0.0
       SERVER_URL: "https://api.nationalaicompany.com"
       TRUST_PROXY: "true"
+      TZ: "Europe/Istanbul"
+
+      # DB & Redis
+      DATABASE_URL: "postgresql://user:pass@postgres:5432/evolution_db?schema=evolution_api"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+
+      # Gerekirse .env içine alın (örnek):
+      # AUTHENTICATION_API_KEY: "xxxx"
 
     volumes:
       - evolution_instances:/evolution/instances
 
-    # Traefik etiketleri (Coolify proxy)
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=coolify"
@@ -70,8 +78,6 @@ services:
       - "traefik.http.routers.evo.rule=Host(`api.nationalaicompany.com`)"
       - "traefik.http.routers.evo.entrypoints=websecure"
       - "traefik.http.routers.evo.tls=true"
-      # Coolify'nin Let's Encrypt resolver adı genelde 'letsencrypt' olur;
-      # Coolify ayarında farklıysa onu yaz.
       - "traefik.http.routers.evo.tls.certresolver=letsencrypt"
       - "traefik.http.routers.evo.priority=100"
       - "traefik.http.routers.evo.service=evo"

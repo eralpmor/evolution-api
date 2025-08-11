@@ -3,7 +3,7 @@ version: "3.9"
 services:
   postgres:
     image: postgres:15
-    container_name: postgres
+    container_name: evolution_postgres
     restart: always
     environment:
       POSTGRES_USER: user
@@ -21,7 +21,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: redis
+    container_name: evolution_redis
     command: ["redis-server","--port","6379","--appendonly","yes"]
     volumes:
       - evolution_redis:/data
@@ -43,14 +43,13 @@ services:
       redis:
         condition: service_healthy
 
-    # Traefik üzerinden yayın yapacağımız için dış porta map etmiyoruz.
+    # Traefik göreceği için dış port açmıyoruz
     expose:
       - "8080"
 
     env_file:
       - .env
     environment:
-      # Sunucu
       NODE_ENV: production
       SERVER_TYPE: http
       SERVER_PORT: "8080"
@@ -59,12 +58,11 @@ services:
       TRUST_PROXY: "true"
       TZ: "Europe/Istanbul"
 
-      # DB & Redis
       DATABASE_URL: "postgresql://user:pass@postgres:5432/evolution_db?schema=evolution_api"
       REDIS_HOST: "redis"
       REDIS_PORT: "6379"
 
-      # Gerekirse .env içine alın (örnek):
+      # Örn:
       # AUTHENTICATION_API_KEY: "xxxx"
 
     volumes:
@@ -74,7 +72,7 @@ services:
       - "traefik.enable=true"
       - "traefik.docker.network=coolify"
 
-      # HTTPS router (443)
+      # HTTPS (443)
       - "traefik.http.routers.evo.rule=Host(`api.nationalaicompany.com`)"
       - "traefik.http.routers.evo.entrypoints=websecure"
       - "traefik.http.routers.evo.tls=true"
@@ -84,7 +82,7 @@ services:
       - "traefik.http.services.evo.loadbalancer.server.port=8080"
       - "traefik.http.services.evo.loadbalancer.server.scheme=http"
 
-      # HTTP (80) -> HTTPS yönlendirme
+      # HTTP (80) -> HTTPS redirect
       - "traefik.http.routers.evo-http.rule=Host(`api.nationalaicompany.com`)"
       - "traefik.http.routers.evo-http.entrypoints=web"
       - "traefik.http.routers.evo-http.middlewares=evo-redirect"
